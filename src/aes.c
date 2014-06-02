@@ -9,9 +9,10 @@ int main(void) {
 	EVP_CIPHER_CTX *ctx = NULL;
 	unsigned char key[16];
 	unsigned char iv[16];
-	unsigned char in[128];
-	unsigned char out[128+16];
-	int r, len, out_len;
+	unsigned char ori_msg[128];
+	unsigned char enc_msg[128+16];
+	unsigned char dec_msg[128];
+	int r, len, enc_msg_len, dec_msg_len;
 
 	ERR_load_CRYPTO_strings();
 	OPENSSL_add_all_algorithms_noconf();
@@ -20,9 +21,9 @@ int main(void) {
 	assert(r == 1);
 	r = RAND_pseudo_bytes(iv, sizeof(iv));
 	assert(r == 1);
-	r = RAND_pseudo_bytes(in, sizeof(in));
+	r = RAND_pseudo_bytes(ori_msg, sizeof(ori_msg));
 	assert(r == 1);
-	r = RAND_pseudo_bytes(out, sizeof(out));
+	r = RAND_pseudo_bytes(enc_msg, sizeof(enc_msg));
 	assert(r == 1);
 
 	ctx = EVP_CIPHER_CTX_new();
@@ -36,13 +37,35 @@ int main(void) {
 	len = EVP_CIPHER_iv_length(EVP_aes_128_ctr());
 	assert(len == sizeof(iv));
 
+
 	r = EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), NULL, key, iv);
 	assert(r == 1);
 
-	r = EVP_EncryptUpdate(ctx, out, &out_len, in, sizeof(in));
+	r = EVP_EncryptUpdate(ctx, enc_msg, &enc_msg_len, ori_msg, sizeof(ori_msg));
 	assert(r == 1);
+	assert(enc_msg_len == sizeof(ori_msg));
+
+	r = EVP_EncryptFinal_ex(ctx, enc_msg + enc_msg_len, &len);
+	assert(r == 1);
+	assert(len == 0);
+
+
+	r = EVP_DecryptInit_ex(ctx, EVP_aes_128_ctr(), NULL, key, iv);
+	assert(r == 1);
+
+	r = EVP_DecryptUpdate(ctx, dec_msg, &dec_msg_len, enc_msg, enc_msg_len);
+	assert(r == 1);
+	assert(dec_msg_len == enc_msg_len);
+
+	r = EVP_DecryptFinal_ex(ctx, dec_msg + dec_msg_len, &len);
+	assert(r == 1);
+	assert(len == 0);
+
+	assert(memcmp(ori_msg, dec_msg, dec_msg_len) == 0);
+
 
 	EVP_CIPHER_CTX_free(ctx);
 
+	puts("OK!");
 	return 0;
 }

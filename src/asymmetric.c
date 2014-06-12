@@ -136,7 +136,6 @@ static void encrypt_decrypt(EVP_PKEY *key)
 
 	dec_msg_len = sizeof(dec_msg);
 	r = EVP_PKEY_decrypt(enc_ctx, dec_msg, &dec_msg_len, enc_msg, enc_msg_len);
-	ERR_print_errors_fp(stderr);
 	assert(r == 1);
 
 	puts("Decrypted Plaintext:");

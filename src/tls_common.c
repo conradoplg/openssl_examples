@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <openssl/err.h>
 
 
 void print_ciphers(SSL *ssl)

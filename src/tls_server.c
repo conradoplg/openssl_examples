@@ -16,10 +16,11 @@
 
 int server_socket_new(int port) {
 	int sd;
-	struct sockaddr_in addr;
+	struct sockaddr_in6 addr;
 	int so_reuseaddr = 1;
+	int ipv6_v6only = 0;
 
-	sd = socket(AF_INET, SOCK_STREAM, 0);
+	sd = socket(AF_INET6, SOCK_STREAM, 0);
 	if (sd == -1) {
 		perror(NULL);
 		assert(0);
@@ -29,11 +30,15 @@ int server_socket_new(int port) {
 		perror(NULL);
 		assert(0);
 	}
+	if (setsockopt(sd, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_v6only, sizeof(ipv6_v6only)) != 0) {
+		perror(NULL);
+		assert(0);
+	}
 
 	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	addr.sin_addr.s_addr = INADDR_ANY;
+	addr.sin6_family = AF_INET6;
+	addr.sin6_port = htons(port);
+	addr.sin6_addr = in6addr_any;
 	if (bind(sd, (struct sockaddr*) &addr, sizeof(addr)) != 0) {
 		perror(NULL);
 		assert(0);
@@ -105,12 +110,23 @@ int main() {
 	ssl_setup(ctx, CAFile, CertFile, KeyFile);
 	server_socket = server_socket_new(atoi(portnum));
 	while (1) {
-		struct sockaddr_in addr;
+		struct sockaddr_in6 addr;
 		socklen_t len = sizeof(addr);
+		char client_address_s[INET6_ADDRSTRLEN];
 		SSL *ssl = NULL;
+		const char *pr;
 
 		int client = accept(server_socket, (struct sockaddr*) &addr, &len);
-		printf("Connection: %s:%d\n", inet_ntoa(addr.sin_addr),	ntohs(addr.sin_port));
+		if (client == -1) {
+			perror(NULL);
+			assert(0);
+		}
+		pr = inet_ntop(AF_INET6, &addr.sin6_addr, client_address_s, sizeof(client_address_s));
+		if (!pr) {
+			perror(NULL);
+			assert(0);
+		}
+		printf("Connection: %s:%d\n", client_address_s, ntohs(addr.sin6_port));
 		ssl = SSL_new(ctx);
 		print_ciphers(ssl);
 		if (!ssl) {

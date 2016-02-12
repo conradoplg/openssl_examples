@@ -21,7 +21,7 @@ int client_socket_new(const char *hostname, int port) {
 	snprintf(portstr, sizeof(portstr), "%d", port);
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
+	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG | AI_NUMERICSERV;
 
@@ -50,17 +50,21 @@ SSL_CTX* client_new(void) {
 	return ctx;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
 	SSL_CTX *ctx;
 	int server;
 	SSL *ssl;
 	char buf[1024];
 	int bytes;
-	char hostname[] = "127.0.0.1";
+	char *hostname = "127.0.0.1";
 	char portnum[] = "5000";
 	char CAFile[] = "/home/conrado/ca/kryptus.crt.pem";
 	char CertFile[] = "/home/conrado/ca/alice.crt.pem";
 	char KeyFile[] = "/home/conrado/ca/alice.prv.pem";
+
+	if (argc >= 2) {
+		hostname = argv[1];
+	}
 
 	SSL_library_init();
 

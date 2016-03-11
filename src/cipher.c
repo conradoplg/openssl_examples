@@ -10,8 +10,8 @@ int main(void) {
 	unsigned char key[16];
 	unsigned char iv[16];
 	unsigned char ori_msg[128];
-	unsigned char enc_msg[128+16];
-	unsigned char dec_msg[128];
+	unsigned char enc_msg[128+32];
+	unsigned char dec_msg[128+32];
 	int r, len, enc_msg_len, dec_msg_len;
 	const EVP_CIPHER* cipher = NULL;
 
@@ -28,6 +28,7 @@ int main(void) {
 	assert(r == 1);
 
 	cipher = EVP_aes_128_ctr();
+//	cipher = EVP_aes_128_cbc();
 
 	ctx = EVP_CIPHER_CTX_new();
 	assert(ctx);
@@ -46,11 +47,12 @@ int main(void) {
 
 	r = EVP_EncryptUpdate(ctx, enc_msg, &enc_msg_len, ori_msg, sizeof(ori_msg));
 	assert(r == 1);
-	assert(enc_msg_len == sizeof(ori_msg));
+	assert(enc_msg_len < sizeof(enc_msg));
 
 	r = EVP_EncryptFinal_ex(ctx, enc_msg + enc_msg_len, &len);
 	assert(r == 1);
-	assert(len == 0);
+	assert(len <= EVP_CIPHER_CTX_block_size(ctx));
+	enc_msg_len += len;
 
 
 	r = EVP_DecryptInit_ex(ctx, cipher, NULL, key, iv);
@@ -58,11 +60,12 @@ int main(void) {
 
 	r = EVP_DecryptUpdate(ctx, dec_msg, &dec_msg_len, enc_msg, enc_msg_len);
 	assert(r == 1);
-	assert(dec_msg_len == enc_msg_len);
+	assert(dec_msg_len <= sizeof(dec_msg));
 
 	r = EVP_DecryptFinal_ex(ctx, dec_msg + dec_msg_len, &len);
 	assert(r == 1);
-	assert(len == 0);
+	assert(len <= EVP_CIPHER_CTX_block_size(ctx));
+	dec_msg_len += len;
 
 	assert(memcmp(ori_msg, dec_msg, dec_msg_len) == 0);
 
